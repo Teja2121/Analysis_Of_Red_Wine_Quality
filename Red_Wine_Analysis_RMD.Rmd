@@ -1,0 +1,609 @@
+---
+title: "**ANALYSIS OF RED WINE QUALITY USING PHYSICOCHEMICAL PROPERTIES**"
+author: "**Group Information:**"
+date: "Sai Teja Reddy Konala, Sri Harshini Puduri, Shirisha Hechirla, Jayakrishna Sai Chintagumpula"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE, echo = TRUE)
+```
+
+```{r get-labels, echo = FALSE}
+labs = knitr::all_labels()
+labs = setdiff(labs, c("setup", "get-labels"))
+```
+
+
+
+# Section 1: Introduction
+
+The idea of this project is to examine the correlation between the physicochemical properties and sensory evaluations (quality) of red vinho verde wine from Portugal and to find which physicochemical attributes are important when modeling the 'quality' of wine as the response attribute. The hypotheses is that not every predictor variable has a significant role in predicting the quality of the red wine. So, there might be some predictors that are more significant than the others in determining the quality of the red wine. This is just an assumption which should be tested out.
+
+For this project, we will use the `winequality-red` data set from UC Irvine Machine Learning Repository (Cortez,Paulo, Cerdeira,A., Almeida,F., Matos,T., and Reis,J.. (2009). Wine Quality. UCI Machine Learning Repository. https://doi.org/10.24432/C56S3T.). The dataset in focus involves red variant of the Portuguese "Vinho Verde" wine, containing only physicochemical attributes as inputs and sensory evaluation attribute `quality` as output, excluding specific details such as grape types, wine brands, or prices. This dataset was created by Paulo Cortez and derived when 1599 types of wine were tasted by wine experts and the wine was given a grade quality ranging from 0(worst) to 10(best).
+
+The physicochemical variables in the observations are fixed acidity, volatile acidity, citric acid, residual sugar, chlorides, total sulphur dioxide, free sulphur dioxide, density, pH, sulphates, and alcohol. We will use these physiochemical attributes as the predictor variables and `quality` as the response variable. Some of the variable names from the original dataset have been renamed. The full red wine dataset contains 1599 observations and the following 12 variables (including 1 response variable). Their interpretation and units of measurement are given below:
+
+- `FA`: fixed acidity of red wine in ($g(tartaric\ acid)/dm^3$)
+- `VA`: volatile acidity of red wine in ($g(acetic\ acid)/dm^3$)
+- `CA`: citric acid contained in red wine in ($g/dm^3$)
+- `RS`: residual sugar contained in red wine in ($g/dm^3$)
+- `CL`: chlorides contained in red wine in ($g(sodium\ chloride)/dm^3$)
+- `FSO2`: free sulfur dioxide contained in red wine in ($mg/dm^3$)
+- `TSO2`: total sulfur dioxide contained in red wine in ($mg/dm^3$)
+- `DEN`: density of red wine in ($g/cm^3$)
+- `pH`: power of hydrogen (ph level) of red wine on a ph scale of 0 to 14
+- `SUL`: sulphates contained in red wine in ($g(pottasium\ sulphate)/dm^3$)
+- `ALC`: alcohol contained in red wine in ($vol.\%$)
+- `quality`: quality of red wine (between 0 to 10). This is the response variable.
+
+```{r eq1, include = FALSE}
+#section 1 starts here
+
+library(readr)
+library(ggplot2)
+library(quantreg)
+library(faraway)
+library(car)
+library(tidyverse)
+# loading our red wine dataset into r
+rwq = read_csv("D:/UNI/Masters/FSU/Semester 1/Regressions/Project/winequality-red.csv")
+
+```
+
+\newpage
+
+Scatter plot graph between quality and ALC (alcohol in red wine). Because, alcohol is an important metric in alcoholic beverages like red wine.
+
+```{r eq2, fig.height = 10, fig.width = 10, fig.align = 'center', echo = FALSE}
+# scatterplot between quality and ALC
+plot(quality ~ ALC, data = rwq,
+     xlab = "alcohol in red wine in (vol.%)",
+     ylab = "quality of red wine (between 0 to 10)",
+     main = "Quality vs Alcohol in red wine",
+     pch  = 20,
+     cex  = 2,
+     col  = "dodgerblue")
+
+```
+
+The scatterplot between quality and ALC (alcohol in red wine) seems to have a linear relationship from the scatterplot graph. However, we will test out when we perform regression analysis and finally choosing a relevant model to the given dataset.
+
+\newpage
+
+Scatter plot graph between quality and RA (residual sugar in red wine). 
+
+```{r eq3, fig.height = 6, fig.width = 10, fig.align = 'center', echo = FALSE}
+# scatterplot between quality and RS
+plot(quality ~ RS, data = rwq,
+     xlab = "residual sugar in red wine in (g/dm^3)",
+     ylab = "quality of red wine (between 0 to 10)",
+     main = "Quality vs residual sugar contained in red wine",
+     pch  = 20,
+     cex  = 2,
+     col  = "dodgerblue")
+
+```
+
+The scatterplot between quality and RA doesn't seems to have a linear relationship from the scatterplot graph. However, we will test out when we perform regression analysis.
+
+Histogram for the predictor variable which is quality (quality of red wine between 0 to 10.
+
+```{r eq4, figheight = 10, fig.width = 10, fig.align = 'center', echo = FALSE}
+# histogram for quality
+hist(rwq$quality,
+     xlab = "quality of red wine (between 0 to 10)",
+     main = "Quality of Red wine",
+     breaks = 5,
+     col    = "dodgerblue",
+     border = "white")
+
+#section 1 ends here
+
+```
+
+From the histogram, we see that the quality of red wine is mostly between 4-6 and only some observations have a quality of red wine to be less than 4 and more than 7.
+
+\newpage
+
+# Section 2: Regression Analysis
+
+Firstly, collinearity between variables needs to be checked. So let us assume that the variables have high correlation if the pairwise correlation value is greater than 0.6.
+
+The correlation matrix is as follows:
+
+```{r eq5, include = FALSE}
+# section 2 starts here
+
+# collinearity 
+library(dplyr)
+library(corrplot)
+library(olsrr)
+library(faraway)
+library(lmtest)
+library(MASS)
+# data.frame containing just the predictors
+rwq_preds = dplyr::select(rwq, -quality)
+round(cor(rwq_preds), 3)
+
+```
+
+```{r eq6, fig.height = 6, fig.width = 10, fig.align = 'center', echo = FALSE}
+# correlation matrix
+corrplot(cor(rwq_preds), 
+         method = 'color', order = 'hclust',  diag = FALSE,
+         number.digits = 3, addCoef.col = 'black', tl.pos= 'd', cl.pos ='r')
+
+```
+
+We can see that (DEN, FA), (FA, CA), (FA, pH) and (FSO2, TSO2) appear to be correlated. Let's also check for condition number and VIF's for the model.
+
+```{r eq7, echo = FALSE}
+# checking the condition number
+model_collinearity = lm(quality ~ ., data = rwq)
+round(ols_eigen_cindex(model_collinearity)[, 1:2], 4)
+```
+
+Here, collinearity exists because the condition number is 6053.4834, which is greater than 30. So, lets also check for VIF's.
+
+\newpage
+
+```{r eq8, echo = FALSE}
+# check the vif's for the model_collinearity 
+vif(model_collinearity)
+
+```
+The VIF of FA and DEN is greater than 5. Lets remove FA, DEN and FSO2 from the model to reduce collinearity. Now lets check the VIF's of this new model.
+
+```{r eq9, echo = FALSE}
+# check for vif on new model (model_collinearity1)
+model_collinearity1 = lm(quality ~ . - FA - FSO2 - DEN, data = rwq)
+vif(model_collinearity1)
+```
+With FA (fixed acidity), FSO2 (Free sulpher dioxide), DEN (Density) removed, the VIF's of the variables are less than 5. Now let's check for orthagonality for the new model (model_collinearity1):
+
+```{r eq10, echo = FALSE}
+#orthogonality on new model (model_collinearity1)
+1 - 1/vif(model_collinearity1)
+```
+
+RS, CL, SUL, ALC, TSO2 is orthogonal from the new model ($R^2_k$ < 0.3). So, overall removing those predictors seemed to reduce the collinearity of the overall model. Let's check this once again with correlation matrix:
+
+```{r eq11, fig.height = 6, fig.width = 10, fig.align = 'center', echo = FALSE}
+rwq_preds1 = dplyr::select(rwq, -FA, - quality, - FSO2, - DEN)
+# correlation matrix
+corrplot(cor(rwq_preds1), 
+         method = 'color', order = 'hclust',  diag = FALSE,
+         number.digits = 3, addCoef.col = 'black', tl.pos= 'd', cl.pos ='r')
+```
+This looks much better than the initial correlation matrix.
+
+\newpage
+
+Let's check for any outliers in the observations:
+```{r eq111, echo = FALSE}
+outlier_test_cutoff = function(model, alpha = 0.05) {
+    n = length(resid(model))
+    qt(alpha/(2 * n), df = df.residual(model) - 1, lower.tail = FALSE)
+}
+
+# vector of indices for observations deemed outliers.
+cutoff = outlier_test_cutoff(model_collinearity1, alpha = 0.05)
+
+which(abs(rstudent(model_collinearity1)) > cutoff)
+```
+
+There are no outliers in the observations.
+
+Now let's search for any highly influential observations:
+
+```{r eq12, echo = FALSE}
+# check for highly influential observations on the model : model_collinearity1
+highly_inf_obs = which(cooks.distance(model_collinearity1) > 4 / length(cooks.distance(model_collinearity1)))
+# count the number of highly influential observations
+length(highly_inf_obs)
+
+```
+
+There are 100 highly influential observations in the dataset. 
+
+Lets remove these observations from the dataset in the new model.
+
+```{r eq13, echo = FALSE}
+# ids for non-influential observations
+noninfluential_ids = which(
+    cooks.distance(model_collinearity1) <= 4 / length(cooks.distance(model_collinearity1)))
+
+# fit the model on non-influential subset
+model_collinearity2 = lm(quality ~ . - FA,
+               data = rwq,
+               subset = noninfluential_ids)
+# return coefficients for new model(model_collinearity2)
+coef(model_collinearity2)
+```
+
+The coefficients of old model (model_collinearity1): 
+
+```{r eq14, echo = FALSE}
+# return coefficients for old model(model_collinearity1)
+coef(model_collinearity1)
+
+```
+There seems to be change in the coefficient values with the highly influential observations removed, so lets use the model with the highly influential observations removed for now (model_collinearity2). Now, lets look at the fitted vs residual graph for this model.
+
+```{r eq15, fig.height = 4, fig.width = 4, fig.align = 'center', echo = FALSE}
+# fitted vs redisual values for the model (model_collinearity2)
+ols_plot_resid_fit(model_collinearity2)
+```
+
+\newpage
+
+From the graph, it seems like both the normality and constant varaince assumptions are being violated. So, to confirm this we use breusch-pagan test for constant variance and shaprio wilk test for normality.
+
+```{r eq16, echo = FALSE}
+# breush-pagan test
+bptest(model_collinearity2)
+```
+The test stastic for breush-pagan test is 39.379 and the p-value is $2.179*10^{-5}$. Let's assume significane level ($\alpha$) to be 0.05. The p-value is lesser than significance level, so constant variance assumption is violated.
+
+```{r eq17, echo = FALSE}
+#shapiro-wilk test
+shapiro.test(resid(model_collinearity2))
+
+```
+
+The test stastic for shaprio-wilk test is 0.99592 and the p-value is $0.0004671$. Let's assume significance level ($\alpha$) to be 0.05. The p-value is lesser than significance level, so normality assumption is violated.
+
+First, we will use bootstrap for OLS on the model with collinear predictors removed (model_collinearity1). We are using 1500 boostrap samples with a seed of 42 for reproducability.
+
+```{r eq29, echo = FALSE}
+# confidence interval for the model using bootstrap
+set.seed(42)
+Confint(Boot(model_collinearity1, R = 1500, method = 'residual'))
+```
+
+Let's also find the confidence interval for the same model without using bootstrap:
+```{r eq30, echo = FALSE}
+# confidence interval for regular OLS model without using bootstrap
+confint(model_collinearity1)
+
+```
+In this case, the intervals are relatively similar in width and location and there would be no change in our hypothesis tests. So lets perform LAD regression.
+
+\newpage
+
+```{r eq31, echo = FALSE}
+# LAd regression (model_lad)
+model_lad = rq(quality ~ . - FA - DEN - FSO2, data = rwq)
+summary(model_lad)
+```
+
+The confidence intervals for LAD are:
+```{r eq32, echo = FALSE}
+# calculating the lower and upper bounds for LAD (model_lad)
+# Extract coefficient estimates and standard errors
+coef_estimates = coef(model_lad)
+se = summary(model_lad)$coefficients[, "Std. Error"]
+
+# Set the desired confidence level
+confidence_level = 0.95
+
+# Calculate confidence intervals
+z_value <- qnorm((1 + confidence_level) / 2)  # For a two-sided interval
+lower_bound <- coef_estimates - z_value * se
+upper_bound <- coef_estimates + z_value * se
+
+# Combine results into a data frame
+confidence_intervals <- data.frame(
+  Coefficient = coef_estimates,
+  LowerBound = lower_bound,
+  UpperBound = upper_bound
+)
+
+# Print the results
+print(confidence_intervals)
+
+```
+
+Let's use huber's method and use bootstrap confidence intervals with R to be 1500.
+
+```{r eq33, echo = FALSE}
+# IRWLS with a limit of 100 iterations.
+model_hub = rlm(quality ~ . - FA - DEN - FSO2, maxit = 100, data = rwq)
+summary(model_hub)
+```
+
+\newpage
+
+The confidence intervals for huber's method are:
+
+```{r eq34, echo = FALSE}
+#bootstrap confint for huber's methos (model_hub)
+set.seed(42)
+Confint(Boot(model_hub, R = 1500, method = 'residual'))
+```
+
+Now, lets remove the highly influential observations removed and fit OLS model:
+```{r eq35, echo = FALSE}
+# fitting ols model with no highly influential observations
+model_ols_no_highinf = lm(quality ~ . - FA - FSO2 - DEN, data = rwq,
+                           subset = noninfluential_ids)
+summary(model_ols_no_highinf)
+
+```
+Removing highly influential observations does seem to change the estimate of parameter CA is significant, when its not significant in previous OLS model with the highly influential observations.
+
+Now let's fit LAD without the highly influential observations:
+```{r eq36, echo = FALSE}
+# fitting the model with lad and no highly influential observations
+model_lad_no_highinf = rq(quality ~ . - FA - DEN - FSO2, data = rwq,
+                           subset = noninfluential_ids)
+summary(model_lad_no_highinf, alpha = 0.05)
+
+```
+
+The confidence intervals are:
+
+```{r eq37, echo = FALSE}
+# calculating the lower and upper bounds for LAD with no highly influential observations (model_lad_no_highinf)
+# Extract coefficient estimates and standard errors
+coef_estimates = coef(model_lad_no_highinf)
+se = summary(model_lad_no_highinf)$coefficients[, "Std. Error"]
+
+# Set the desired confidence level
+confidence_level = 0.95
+
+# Calculate confidence intervals
+z_value <- qnorm((1 + confidence_level) / 2)  # For a two-sided interval
+lower_bound <- coef_estimates - z_value * se
+upper_bound <- coef_estimates + z_value * se
+
+# Combine results into a data frame
+confidence_intervals <- data.frame(
+  Coefficient = coef_estimates,
+  LowerBound = lower_bound,
+  UpperBound = upper_bound
+)
+
+# Print the results
+print(confidence_intervals)
+
+```
+
+Here the significance of variables remains the same even with highly influential observations removed, So for LAD, we can use the model with highly influential observations present.
+
+Now, let's remove highly influential observations from the dataset itself and perform Huber's method:
+
+```{r eq38, echo = FALSE}
+# huber's method with no highly influential observations
+model_hub_no_highinf = rlm(quality ~ . - FA - DEN - FSO2, maxit = 100, data = rwq[-c(14,34,44,46,80,87,92,93,132,133,143,145,152,162,170,199,200,235,240,279,282,292,354,365,367,379,391,410,441,443,452,456,460,481,496,499,518,567,568,589,634,639,646,648,653,660,673,691,701,724,724,755,777,814,829,833,862,877,900,904,905,938,999,1044,1062,1078,1079,1080,1082,1091,1112,1121,1125,1177,1187,1234,1236,1240,1262,1270,1277,1288,1289,1290,1300,1320,1375,1404,1424,1430,1435,1436,1468,1470,1479,1483,1485,1506,1515,1516),])
+summary(model_hub_no_highinf)
+```
+
+The confidence intervals is as follows for huber's method with no influential observations using bootstrap intervals:
+```{r eq39, echo = FALSE}
+# bootstrap intervals with huber's method and no highly influential observations
+set.seed(42)
+Confint(Boot(model_hub_no_highinf, R = 1500, method = 'residual'))
+
+```
+
+
+
+Here we can see that CA is significant while it wasn't significant before, which is different from the model with Huber's method with no highly influential observations.
+
+Let's create a table with all these models with the intercept and predictor estimates and bold implies that the predictor or intercept is significant according to the test conducted.
+
+```{r eq40, echo = FALSE}
+# table with all the methods (OLS, OLS refit, LAD, LAD refit, Huber, Huber refit)
+Methods = c("**OLS**", "**OLS[Refit]**", "**LAD**", "**LAD[Refit]**", "**Huber**", "**Huber[Refit]**")
+Intercept = c("**4.603**", "**4.244**","**3.027**","**2.930**","**4.215**","**4.110**")
+VA = c("**-1.122**", "**-1.003**","**-0.787**","**-0.761**","**-1.030**","**-0.985**")
+CA = c("-0.181", "**-0.315**","-0.078","-0.154","-0.160","**-0.282**")
+RS = c("0.011", "0.022","**0.035**","**0.034**","**0.024**","**0.024**")
+CL = c("**-1.932**","**-2.142**","**-2.119**","**-2.288**","**-1.781**","**-2.131**")
+TSO2 = c("**-0.002**","**-0.002**","**-0.002**","**-0.002**","**-0.002**","**-0.002**")
+pH = c("**-0.522**","**-0.486**","**-0.339**","**-0.343**","**-0.448**","**-0.458**")
+SUL = c("**0.906**","**1.177**","**1.091**","**1.227**","**0.928**","**1.169**")
+ALC = c("**0.293**","**0.299**","**0.347**","**0.353**","**0.298**","**0.302**")
+table40 = data.frame(Methods, Intercept, VA, CA, RS, CL, TSO2, pH, SUL, ALC)
+knitr::kable(table40, "pipe", align=c("l" , "c", "c", "c", "c", "c", "c", "c", "c", "c"))
+
+```
+
+
+So we should choose LAD model (model_lad) as the final model because the significance didn't change even after removing the highly influential observations. The regression equation is:
+
+$quality_i$ = 3.027 - 0.787 $\text{VA}_i$ - 0.0785 $\text{CA}_i$ + 0.035 $\text{RS}_i$ - 2.119 $\text{CL}_i$ - 0.002 $\text{TSO2}_i$ - 0.339 $\text{pH}_i$ + 1.091 $\text{SUL}_i$ + 0.347 $\text{ALC}_i$.
+
+lets do shaprio wilk test to the final model: (model_lad)
+
+```{r eq41, echo = FALSE}
+# shaprio wilk test for final model
+shapiro.test(resid(model_lad))
+
+```
+The test statistic is 0.98674 and the p-value is $6.066*10^{-11}$. The normality assumption is viloated as the test statistic is less than the significance level of 0.05.
+
+\newpage
+
+Lets check the breush pagan test:
+
+```{r eq42, echo = FALSE}
+# breush pagan test for final model
+bptest(model_lad)
+
+#section 2 ends here
+
+```
+
+The test statistic is 75.073 and the p-value is $4.77*10^{-13}$. As p-value is less than significance level of 0.05, the constant variance assumption is violated for the final model.
+
+
+# Section 3: Discussion
+
+Let's look at the selected final model (model_lad) and the coefficient interpretation:
+
+- Fixed Acidity (FA): Not included in the final model after addressing collinearity.
+
+- Volatile Acidity (VA): A one-unit decrease in volatile acidity corresponds to an increase of approximately 0.787 units in wine quality.
+
+- Citric Acid (CA): A one-unit decrease in citric acid is associated with a decrease of 0.0785 units in wine quality.
+
+- Residual Sugar (RS): An increase of 1 unit in residual sugar leads to an increase of about 0.035 units in wine quality.
+
+- Chlorides (CL): One unit increase in chlorides results in a substantial decrease of 2.119 units in wine quality.
+
+- Total Sulfur Dioxide (TSO2): A reduction of 1 unit in total sulfur dioxide is associated with a decrease of 0.002 units in wine quality.
+
+- pH level (pH): A one-unit decrease in pH is linked to a decrease of approximately 0.339 units in wine quality.
+
+- Sulphates (SUL): An increase of 1 unit in sulphates corresponds to an increase of 1.091 units in wine quality.
+
+- Alcohol (ALC): A one-unit increase in alcohol content leads to an increase of about 0.347 units in wine quality.
+
+- Density (DEN) : Not included in the final model after addressing collinearity.
+
+- Free SO2 (FSO2) : Not included in the final model after addressing collinearity.
+
+The LAD model says that Citric acid level (CA) is not significant and the other predictors VA, RS, CL, TSO2, pH, SUL, ALC are significant (If the confidence interval didn't have 0 in the particular intercept or predictor, it is significant). We can't directly calculate the values of $R^2$ for the LAD model. The LAD regression model demonstrates statistical significance, and the chosen predictors provide meaningful insights into the physicochemical attributes influencing red wine quality. So, some predictors are significant than other predictors (CA is insignificant according to LAD model). The LAD model also addressed collinearity as collinear predictor were removed from the model(FA, DEN, FSO2) and also maintains robustness against highly influential observations in the data observations because we used LAD, resulting in a somewhat interpretable model.
+
+At the same time, there assumptions might not be true because the LAD model is still violating the constant variance assumption and also the normality assumption. This is checked by using breush-pagan test for constant variance assumption and the p-value is $4.77*10^{-13}$ which is less than significance level of 0.05, so the constant variance assumption is violated. The normality assumption is also violated as the p-value of the shapiro-wilk test is $6.066*10{-11}$ which is again less than significance level of 0.05.
+
+So, this prediction can be potentially used for testing out quality of wine from physicochemical properties if the normality and constant variation assumptions were fixed. Some alternative transformations or modeling techniques can be used to address these issues.
+
+
+# Section 4: Limitations
+
+- The reliability and validity of the analysis in our study are subject to several limitations. Even though efforts have been made to address potential non-linearities through variable transformations, such as logarithmic transformations, it is still possible that the underlying functional forms are not fully captured. The 'winequality-red' dataset from the UC Irvine Machine Learning Repository is the only dataset used, which raises questions about how broadly applicable the results will be. Moreover, there may be issues with model assumptions, namely the assumption of normality, due to the categorical nature of the 'quality' variable, which has only 10 discrete values. Although robust regression techniques and diagnostic tests have been used to address these problems, it is important to recognize that residual non-normality may affect the accuracy of parameter estimates. 
+
+- Furthermore, the violation of assumptions, such as normality and constant variance, in the residuals of certain regression models raises concerns about the validity of the results. While attempts have been made to address these violations, such as exploring different transformations and using weighted least squares (WLS) in the additional work section and robust regression in section 2, it is crucial to recognize that these methods may not fully remedy the violations. In such cases, it becomes important to acknowledge the limitations of the chosen models and explore alternative statistical techniques that are more resilient to the observed violations. If we were to redo the project or continue working on it, we would conduct a more carry out a more thorough analysis into the nature of influential observations to understand their potential impact on the study. Secondly, in order to provide a more reliable analysis, we would look at non-parametric techniques or other regression models that are less susceptible to assumptions. This might involve taking into account machine learning algorithms like gradient boosting or random forests that can capture complex correlations in the data without strictly adhering to linear assumptions.
+
+
+# Section 5: Conclusions
+
+In conclusion, our analysis of the red variant Portuguese "Vinho Verde" wine dataset revealed significant relationships between physicochemical attributes and wine quality. With the quality variable being categorical, the robust LAD regression model turned out to be the most appropriate. There were strong correlations between wine quality and key predictors such alcohol concentration, volatile acidity, and chloride content. However, challenges persisted, including violations of normality and constant variance assumptions. In order to improve the model's applicability, future studies should investigate other statistical methods and take into account additional influencial factors, including grape types or vineyard features. Despite limitations,  this study lays the groundwork for future research in the field by providing important insights into the complex relationships between red wine's physicochemical characteristics and sensory evaluations.
+
+\newpage
+
+# Section 6: Additional Work
+
+Using WLS to see if it can fix the constant variance violation and look at the fitted vs weighted residual graph:
+
+```{r eq18, include = FALSE}
+# additional work starts here
+  
+# initializing the weights for the WLS model on model_collinearity1
+model_wts = lm(abs(resid(model_collinearity1)) ~ . - FA - quality - FSO2 - DEN, data = rwq)
+coef(model_wts)
+# calculate the weights as 1 / (fitted values)^2
+weights = 1 / fitted(model_wts)^2
+# run WLS
+model_wls = lm(quality ~ . - FA - FSO2 - DEN, data = rwq, weights = weights)
+```
+
+```{r eq19, fig.height = 12, fig.width = 12, fig.align = 'center', echo = FALSE}
+# fitted vs weighted residual graph
+plot(fitted(model_wls), weighted.residuals(model_wls), 
+     pch = 20, xlab = 'Fitted Value', ylab = 'Weighted Residual')
+
+abline(h=0, lwd=3, col='steelblue')
+```
+
+\newpage
+
+Let's look at the normal fitted vs residual graph without weighted residuals:
+
+```{r eq20, fig.height = 5, fig.width = 5, fig.align = 'center', echo = FALSE}
+# OLS fitted-vs-residual plot
+plot(fitted(model_collinearity1), resid(model_collinearity1), 
+     pch = 20, ylim = c(-10, 15),
+     xlab = 'Fitted Value', ylab = 'Residual')
+abline(h=0, lwd=3, col='steelblue')
+```
+
+
+Now let's do breush-pagan test to check homoscedasticity:
+
+```{r eq21, echo = FALSE}
+#bp-test for wls model
+bptest(model_wls)
+
+```
+The test-statistic is 6001.6 and the p-value is less than $2.2*10^{-16}$ which is somehow worse than the model from where we started. This might be because the model (model_collinearity1) we used to get WLS has normality violations along with constant variance violations. So we don't use the wls model (model_wls).
+
+Let's use a box-cox method to find an appropriate transformation of the response.
+```{r eq22, fig.align = 'center', echo = FALSE}
+#box-cox
+bc = boxcox(model_collinearity2, lambda = seq(-1, 0.75, by = 0.05), plotit = TRUE)
+```
+
+To extract $\hat{\lambda}$, the value that maximizes the log-likelihood (the function being plotted in the previous graph), we use the following code.
+
+```{r eq23, echo = FALSE}
+# getting the value that maximizes the log-likelihood
+bc$x[which.max(bc$y)]
+```
+
+let's also get the 95% confidence interval from the box plot:
+```{r eq24, echo = FALSE}
+get_lambda_ci = function(bc, level = 0.95) {
+    # lambda such that 
+    # L(lambda) > L(hat(lambda)) - 0.5 chisq_{1, alpha}
+    CI_values = bc$x[bc$y > max(bc$y) - qchisq(level, 1)/2]
+    
+    # 95 % CI 
+    CI <- range(CI_values) 
+    
+    # label the columns of the CI
+    names(CI) <- c("lower bound","upper bound")
+    
+    CI
+}
+
+# extract the 95% CI from the box cox object
+get_lambda_ci(bc)
+
+```
+Here, the 95% confidence interval has 0, so we can use a log transformation. So, let's fit the log transformation and check the residual plot.
+
+```{r eq25, include = FALSE}
+# fitting the model_log
+model_log = lm(log(quality) ~ log(VA) + CA + log(RS) + log(CL) + log(TSO2) + log(pH) + log(SUL) + log(ALC) , data = rwq)
+```
+
+
+```{r eq26, fig.height = 10, fig.width = 10, fig.align = 'center', echo = FALSE}
+# fitted vs residual plot for model_log
+ols_plot_resid_fit(model_log)
+
+```
+
+Now, let's check the breush-pagan test:
+
+```{r eq27, echo = FALSE}
+# breusch-pagan test for model_log
+bptest(model_log)
+```
+
+Here the test statistic is 57.843 and p-value is $1.233*10^{-9}$ which is less than significance level of 0.05. So still constant variance assumption is violated.
+
+\newpage
+
+lets do shaprio wilk test:
+
+```{r eq28, echo = FALSE}
+# shaprio test for model_log
+shapiro.test(resid(model_log))
+
+# additional work ends here
+
+```
+
+Here the test statistic is 0.96354 and p-value is less than $2.2*10^{-16}$ which is less than significance level of 0.05. So still normality assumption is violated. So we reject this model (model_log) too and try using robust regression methods on the models. (Done in section 2).
+
+
+## Code Appendix
+
+```{r all-code, ref.label=labs, eval=FALSE}
+```
