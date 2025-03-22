@@ -69,7 +69,7 @@ The analysis focuses on Portuguese Vinho Verde red wine, investigating how physi
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-username/red-wine-quality-analysis.git
+   git clone https://github.com/Teja2121/Analysis_Of_Red_Wine_Quality
    ```
 2. Open the `Red_Wine_Analysis.Rmd` file in RStudio.
 3. Load the dataset (`winequality-red-raw.csv` or `winequality-red-filtered.csv`).
