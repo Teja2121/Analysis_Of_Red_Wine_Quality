@@ -1,7 +1,7 @@
 ---
 title: "**ANALYSIS OF RED WINE QUALITY USING PHYSICOCHEMICAL PROPERTIES**"
 author: "**Group Information:**"
-date: "Sai Teja Reddy Konala, Sri Harshini Puduri, Shirisha Hechirla, Jayakrishna Sai Chintagumpula"
+date: "Sai Teja Reddy Konala"
 output: pdf_document
 ---
 
