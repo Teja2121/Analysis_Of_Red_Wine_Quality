@@ -1,7 +1,6 @@
 ---
 title: "**ANALYSIS OF RED WINE QUALITY USING PHYSICOCHEMICAL PROPERTIES**"
-author: "**Group Information:**"
-date: "Sai Teja Reddy Konala"
+author: "Sai Teja Reddy Konala"
 output: pdf_document
 ---
 
